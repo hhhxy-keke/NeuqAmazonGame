@@ -69,7 +69,7 @@ class Game:
         """
         return board, WHITE if player == BLACK else BLACK
 
-    def get_valid_actions(self, board, player, ps):
+    def get_valid_actions(self, board, player, p):
         """
         计算当前棋盘下所有可走的动作，同时将NN返回的预测值重新整理:将绝可能到的点概率值为零
         :param board: n*n棋盘
@@ -81,8 +81,8 @@ class Game:
                  Ps -->1 * 300：[0.2， 0.02， 0.23，......]   动作：valids -->[(s, e, a),......]
 
         """
-        valids = []
-        return ps, valids
+        legal_actions = []
+        return p, legal_actions
 
     def get_game_ended(self, board, player):
         """
@@ -140,6 +140,24 @@ class Game:
         newPi = np.append(newPi, newPi_arrow)
         board_list += [(newB, list(newPi.ravel()))]
         return board_list
+
+    def get_transformed_board(self, board, player):
+        """
+        自博弈时将智能体始终转为白棋视角,在MCTS搜索存储各状态属性时使用
+        :param board: n*n棋盘
+        :param player: 当前玩家
+        :return board: 转换后的棋盘
+        """
+        if player == WHITE:
+            return board
+        board = np.copy(board)
+        for i in range(self.board_size):
+            for j in range(self.board_size):
+                if board[i][j] == WHITE:
+                    board[i][j] = BLACK
+                elif board[i][j] == BLACK:
+                    board[i][j] = WHITE
+        return board
 
     def to_string(self, board):
         """

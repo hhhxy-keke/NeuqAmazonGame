@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="69c4fc38-8b2c-4191-86e8-6ac050c7a532" name="Default Changelist" comment="管理员修改">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Game.py" beforeDir="false" afterPath="$PROJECT_DIR$/Game.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Mcts.py" beforeDir="false" afterPath="$PROJECT_DIR$/Mcts.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/TrainMode.py" beforeDir="false" afterPath="$PROJECT_DIR$/TrainMode.py" afterDir="false" />
@@ -18,15 +17,13 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Game.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="516">
-              <caret line="88" column="19" selection-start-line="88" selection-start-column="19" selection-end-line="88" selection-end-column="19" />
+            <state relative-caret-position="972">
+              <caret line="48" column="13" lean-forward="true" selection-start-line="48" selection-start-column="13" selection-end-line="48" selection-end-column="13" />
               <folding>
                 <element signature="e#909#1012#0" />
                 <element signature="e#1052#1174#0" />
                 <element signature="e#1215#1339#0" />
-                <element signature="e#2048#2494#0" />
-                <element signature="e#2882#4651#0" />
-                <element signature="e#4692#4827#0" />
+                <element signature="e#2892#4661#0" />
               </folding>
             </state>
           </provider>
@@ -35,8 +32,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/TrainMode.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state>
-              <caret column="21" selection-start-column="21" selection-end-column="21" />
+            <state relative-caret-position="243">
+              <caret line="9" column="12" lean-forward="true" selection-start-line="9" selection-start-column="12" selection-end-line="9" selection-end-column="12" />
             </state>
           </provider>
         </entry>
@@ -44,8 +41,12 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Mcts.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="867">
-              <caret line="55" column="33" selection-start-line="55" selection-start-column="33" selection-end-line="55" selection-end-column="33" />
+            <state relative-caret-position="275">
+              <caret line="39" column="11" lean-forward="true" selection-start-line="39" selection-start-column="11" selection-end-line="39" selection-end-column="11" />
+              <folding>
+                <element signature="e#0#18#0" expanded="true" />
+                <element signature="e#1301#1427#1" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -73,9 +74,9 @@
         <option value="$PROJECT_DIR$/Board.py" />
         <option value="$PROJECT_DIR$/GameRules.py" />
         <option value="$PROJECT_DIR$/TrainingMode.py" />
-        <option value="$PROJECT_DIR$/TrainMode.py" />
-        <option value="$PROJECT_DIR$/Mcts.py" />
         <option value="$PROJECT_DIR$/Game.py" />
+        <option value="$PROJECT_DIR$/Mcts.py" />
+        <option value="$PROJECT_DIR$/TrainMode.py" />
       </list>
     </option>
   </component>
@@ -91,22 +92,23 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
             <path>
-              <item name="AmazonGame" type="b2602c69:ProjectViewProjectNode" />
-              <item name="AmazonGame" type="462c0819:PsiDirectoryNode" />
+              <item name="NeuqAmazonGame" type="b2602c69:ProjectViewProjectNode" />
+              <item name="NeuqAmazonGame" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RunDashboard">
@@ -269,32 +271,41 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/../Amazons game/Lib/site-packages/tensorflow/contrib/timeseries/python/timeseries/ar_model.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="418">
+          <caret line="487" column="6" selection-start-line="487" selection-start-column="6" selection-end-line="487" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/TrainMode.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <caret column="21" selection-start-column="21" selection-end-column="21" />
+        <state relative-caret-position="243">
+          <caret line="9" column="12" lean-forward="true" selection-start-line="9" selection-start-column="12" selection-end-line="9" selection-end-column="12" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Game.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="516">
-          <caret line="88" column="19" selection-start-line="88" selection-start-column="19" selection-end-line="88" selection-end-column="19" />
+        <state relative-caret-position="972">
+          <caret line="48" column="13" lean-forward="true" selection-start-line="48" selection-start-column="13" selection-end-line="48" selection-end-column="13" />
           <folding>
             <element signature="e#909#1012#0" />
             <element signature="e#1052#1174#0" />
             <element signature="e#1215#1339#0" />
-            <element signature="e#2048#2494#0" />
-            <element signature="e#2882#4651#0" />
-            <element signature="e#4692#4827#0" />
+            <element signature="e#2892#4661#0" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Mcts.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="867">
-          <caret line="55" column="33" selection-start-line="55" selection-start-column="33" selection-end-line="55" selection-end-column="33" />
+        <state relative-caret-position="275">
+          <caret line="39" column="11" lean-forward="true" selection-start-line="39" selection-start-column="11" selection-end-line="39" selection-end-column="11" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+            <element signature="e#1301#1427#1" />
+          </folding>
         </state>
       </provider>
     </entry>
