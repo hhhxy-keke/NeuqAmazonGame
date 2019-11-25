@@ -7,7 +7,7 @@ args = dict({
     'tempThreshold': 35,    # 探索效率
     'updateThreshold': 0.55,
     'maxlenOfQueue': 200000,
-    'numMCTSSims': 50,      # 从当前状态搜索到一个未被扩展的叶结点25次
+    'num_mcts_search': 50,      # 从当前状态搜索到一个未被扩展的叶结点25次
     'arenaCompare': 40,
     'cpuct': 1,
 
