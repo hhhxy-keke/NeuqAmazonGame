@@ -4,6 +4,7 @@ from random import shuffle
 from Game import Game
 import numpy as np
 from Mcts import Mcts
+from NNet import NNet
 
 
 BLACK = -2
@@ -20,7 +21,7 @@ class dotdict(dict):
 # 训练模式的参数
 args = dotdict({
     'num_iter': 1000,          # 神经网络训练次数
-    'num_play_game': 1,        # 下“num_play_game”盘棋训练一次NNet
+    'num_play_game': 10,       # 下“num_play_game”盘棋训练一次NNet
     'max_len_queue': 200000,   # 双向列表最大长度
     'num_mcts_search': 1000,   # 从某状态模拟搜索到叶结点次数
     'max_batch_size': 20,      # NNet每次训练的最大数据量
@@ -54,7 +55,10 @@ class TrainMode:
     # 调用NNet开始训练
     def learn(self):
         for i in range(1, self.args.num_iter + 1):
-            print('************ ITER： ' + str(i) + '************')
+            print('#######################################################################################')
+            print('####################################  IterNum： ' + str(i) + ' ####################################')
+            print('#######################################################################################')
+
             # 每次都执行
             if not self.skipFirstSelfPlay or i > 1:
                 # deque：双向队列  max_len：队列最大长度：self.args.max_len_queue
@@ -115,7 +119,7 @@ class TrainMode:
         使用Mcts完整下一盘棋
         :return: 4 * [(board, pi, z)] : 返回四个训练数据元组：（棋盘，策略，输赢）
         """
-        board = self.game.get_init_board()
+        board = self.game.get_init_board(self.game.board_size)
         play_step = 0
         while True:
             play_step += 1
@@ -140,9 +144,11 @@ class TrainMode:
 
 if __name__ == "__main__":
     game = Game(5)
-    # train = TrainMode(game, nnet)
-    game.board[4][4] = 10
-    print(game.board)
-    print(game.get_init_board(5))
-    print(game.get_action_size())
-    print(args.numIters)
+    nnet = NNet(game)
+    train = TrainMode(game, nnet)
+    train.learn()
+    # game.board[4][4] = 10
+    # print(game.board)
+    # print(game.get_init_board(5))
+    # print(game.get_action_size())
+    # print(args.numIters)
