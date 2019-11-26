@@ -46,12 +46,12 @@ class Mcts:
         # 这里将采样次数转化成对应的模拟概率
         s = self.game.to_string(board)
         # 如果一个动作存在Ns_start记录中，则将该点设为 Ns_start[(s, a)]，不存在时设为0 ////counts_start:[1:100]
-        counts_start = [self.N_start[(s, a)] if (s, a) in self.N_start else 0 for a in range(self.game.board_size)]
+        counts_start = [self.N_start[(s, a)] if (s, a) in self.N_start else 0 for a in range(self.game.board_size**2)]
         # softmax ，将整个1*100的起始点的采样数N转换成概率模式//[0，0，0，0.3，0，0，0，0.21，0..........]
         p_start = [x / float(self.N[s]) for x in counts_start]
-        counts_end = [self.N_end[(s, a)] if (s, a) in self.N_end else 0 for a in range(self.game.board_size)]
+        counts_end = [self.N_end[(s, a)] if (s, a) in self.N_end else 0 for a in range(self.game.board_size**2)]
         p_end = [x / float(self.N[s]) for x in counts_end]
-        counts_arrow = [self.N_arrow[(s, a)] if (s, a) in self.N_arrow else 0 for a in range(self.game.board_size)]
+        counts_arrow = [self.N_arrow[(s, a)] if (s, a) in self.N_arrow else 0 for a in range(self.game.board_size**2)]
         p_arrow = [x / float(self.N[s]) for x in counts_arrow]
 
         # 方法二：使用softmax策略选择动作
