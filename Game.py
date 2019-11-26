@@ -71,7 +71,7 @@ class Game:
         """
         return board, WHITE if player == BLACK else BLACK
 
-    def get_valid_actions(self, board, player, p):
+    def get_valid_actions(self, board, player, pi):
         """
         计算当前棋盘下所有可走的动作，同时将NN返回的预测值重新整理:将绝可能到的点概率值为零
         :param board: n*n棋盘
@@ -84,7 +84,7 @@ class Game:
 
         """
         legal_actions = []
-        return p, legal_actions
+        return pi, legal_actions
 
     def get_game_ended(self, board, player):
         """

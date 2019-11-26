@@ -46,7 +46,7 @@ class TrainMode:
 
     # 完整下一盘游戏
     def play_one_game(self):
-        trainExamples = []
+        steps_train_data = []
         board = self.game.get_init_board()
         play_step = 0
         while True:
@@ -56,55 +56,25 @@ class TrainMode:
             print(board)
             self.mcts.episodeStep = play_step
             # 这里进行了更新
-            # 在蒙特卡洛数中，以player1移动
+            # 在MCTS中，始终以白棋视角选择
             transformed_board = self.game.get_transformed_board(board, self.player)
             # 将翻转后的棋盘和temp传给蒙特卡洛树搜索方法得到当前的策略
-            pi = self.mcts.get_best_action(transformed_board, self.player)     # 进行多次mcts搜索得出来概率
-
-            # 将局面和策略顺时针旋转180度，返回4个棋盘和策略组成的元组
-            sym = self.game.get_symmetries(transformed_board, pi)
-            for b, p in sym:
-                trainExamples.append([b, self.player, p, None])
-            pi_start = pi[0:self.game.board_size]
-            pi_end = pi[self.game.board_size:2*self.game.board_size]
-            pi_arrow = pi[2*self.game.board_size:3*self.game.board_size]
-            # 深拷贝
-            copy_board = np.copy(transformed_board)
-            # 选择下一步最优动作
-            while True:
-                # 将1*100的策略概率的数组传入得到 0~99 的行动点 , action_start,end,arrow都是选出来的点 eg: 43,65....
-                action_start = np.random.choice(len(pi_start), p=pi_start)
-                action_end = np.random.choice(len(pi_end), p=pi_end)
-                action_arrow = np.random.choice(len(pi_arrow), p=pi_arrow)
-                # 加断言保证起子点有棋子，落子点和放箭点均无棋子
-                assert copy_board[action_start // self.game.board_size][action_start % self.game.board_size] == self.player
-                assert copy_board[action_end // self.game.board_size][action_end % self.game.board_size] == EMPTY
-                assert copy_board[action_arrow // self.game.board_size][action_arrow % self.game.board_size] == EMPTY
-                if self.game.is_legal_move(action_start, action_end):
-                    copy_board[action_start // self.game.board_size][action_start % self.game.board_size] = EMPTY
-                    copy_board[action_end//self.game.board_size][action_end % self.game.board_size] = self.player
-                    if self.game.is_legal_move(action_end, action_arrow):
-                        nest_action = [action_start, action_end, action_arrow]
-                        break   # 跳出While True 循环
-                    else:
-                        copy_board[action_start // self.game.board_size][action_start % self.game.board_size] = self.player
-                        copy_board[action_end // self.game.board_size][action_end % self.game.board_size] = EMPTY
-
-            print(nest_action)
-            print('---------------------------')
-            board, self.player = self.game.get_next_state(board, self.player, nest_action)
+            # 进行多次mcts搜索得出来概率
+            next_action, steps_train_data = self.mcts.get_best_action(transformed_board, self.player)
+            print(next_action)
+            board, self.player = self.game.get_next_state(board, self.player, next_action)
 
             r = self.game.get_game_ended(board, self.player)
 
             if r != 0:  # 胜负已分
-                return [(x[0], x[2], r*((-1)**(x[1] != self.player))) for x in trainExamples]
+                return [(x[0], x[2], r*((-1)**(x[1] != self.player))) for x in steps_train_data]
                 #       [(棋盘 , 策略 , 1/-1(输赢奖励)),(s,pi,z),(),().....]
 
 
 if __name__ == "__main__":
     game = Game(5)
     # train = TrainMode(game, nnet)
-    game.board[4][4] = 100
+    game.board[4][4] = 10
     print(game.board)
     print(game.get_init_board(5))
     print(game.get_action_size())

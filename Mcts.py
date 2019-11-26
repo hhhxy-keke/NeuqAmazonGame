@@ -9,9 +9,11 @@ ARROW = 1
 
 
 class Mcts:
+    """
+    蒙特卡洛树搜索类：对给定棋盘状态始终使用“白棋视角”搜索得到下一步最优行动
+    """
     def __init__(self, game, nnet, args):
         """
-        蒙特卡洛树搜索类：对给定棋盘状态使用MCTS方法得到下一步最优行动
         :param game: 当前棋盘对象
         :param nnet: 神经网络
         :param args: 训练参数
@@ -23,7 +25,7 @@ class Mcts:
 
         self.Game_End = {}        # 输赢状态字典
         self.Actions = {}         # 某状态下所有可走的行动
-        self.P = {}               # 行动时选点的概率 value: 3 * board_size 的一维列表
+        self.Pi = {}              # 行动时选点的概率 value: 3 * board_size 的一维列表
         self.N = {}               # 某状态的访问次数
         self.Nsa = {}             # 某状态s+动作a（下一状态）访问次数 == N[s+1]
         self.Qsa = {}             # 某状态s+动作a（下一个状态）的奖励值
@@ -34,12 +36,12 @@ class Mcts:
 
     def get_best_action(self, board, player):
         """
-        :param board: 当前棋盘
-        :param player: 当前玩家
-        :return pi: 各点选择概率
+        :param board:  当前棋盘
+        :param player:  玩家
+        :return best_action: 下一步最优动作
         """
         for i in range(self.args.num_mcts_search):
-            self.search(board, player)
+            self.search(board)
 
         # 这里将采样次数转化成对应的模拟概率
         s = self.game.to_string(board)
@@ -56,9 +58,40 @@ class Mcts:
         pi = p_start
         pi = np.append(pi, p_end)
         pi = np.append(pi, p_arrow)
-        return pi
 
-    def search(self, board, player):
+        # 将局面和策略顺时针旋转180度，返回4个棋盘和策略组成的元组
+        steps_train_data = []
+        sym = self.game.get_symmetries(board, pi)
+        for boards, pis in sym:
+            steps_train_data.append([boards, player, pis, None])
+        pi_start = pi[0:self.game.board_size]
+        pi_end = pi[self.game.board_size:2 * self.game.board_size]
+        pi_arrow = pi[2 * self.game.board_size:3 * self.game.board_size]
+        # 深拷贝
+        copy_board = np.copy(board)
+        # 选择下一步最优动作
+        while True:
+            # 将1*100的策略概率的数组传入得到 0~99 的行动点 , action_start,end,arrow都是选出来的点 eg: 43,65....
+            action_start = np.random.choice(len(pi_start), p=pi_start)
+            action_end = np.random.choice(len(pi_end), p=pi_end)
+            action_arrow = np.random.choice(len(pi_arrow), p=pi_arrow)
+            # 加断言保证起子点有棋子，落子点和放箭点均无棋子
+            assert copy_board[action_start // self.game.board_size][action_start % self.game.board_size] == self.player
+            assert copy_board[action_end // self.game.board_size][action_end % self.game.board_size] == EMPTY
+            assert copy_board[action_arrow // self.game.board_size][action_arrow % self.game.board_size] == EMPTY
+            if self.game.is_legal_move(action_start, action_end):
+                copy_board[action_start // self.game.board_size][action_start % self.game.board_size] = EMPTY
+                copy_board[action_end // self.game.board_size][action_end % self.game.board_size] = self.player
+                if self.game.is_legal_move(action_end, action_arrow):
+                    best_action = [action_start, action_end, action_arrow]
+                    break  # 跳出While True 循环
+                else:
+                    copy_board[action_start // self.game.board_size][action_start % self.game.board_size] = self.player
+                    copy_board[action_end // self.game.board_size][action_end % self.game.board_size] = EMPTY
+
+        return best_action, steps_train_data
+
+    def search(self, board):
         """
         对状态进行一次递归的模拟搜索，添加各状态（棋盘）的访问结点信息（始终以白棋视角存储）
         :param board: 棋盘当前
@@ -68,16 +101,17 @@ class Mcts:
         board_key = self.game.to_string(board)
         # 判断是否胜负已分（叶子节点）
         if board_key not in self.Game_End:
-            self.Game_End[board_key] = self.game.get_game_ended(board, player)
+            self.Game_End[board_key] = self.game.get_game_ended(board, WHITE)
         if self.Game_End[board_key] != 0:
             return -self.Game_End[board_key]
 
         # 判断board_key是否为新扩展的节点
-        if board_key not in self.P:
+        if board_key not in self.Pi:
             # 由神经网路预测策略与v([-1,1]) PS[s] 为[1:300]数组
-            self.P[board_key], v = self.nnet.predict(board)
+            self.Pi[board_key], v = self.nnet.predict(board)
             # 得到在有效路径归一化后的P与动作；eg：P -->1 * 300：[0.2， 0.02， 0.23，......]   动作：legal_actions -->[[s, e, a], [98, 87, 56]......]
-            self.P[board_key], legal_actions = self.game.get_valid_actions(board, player, self.P[board_key])
+            # 始终寻找白棋可走的行动
+            self.Pi[board_key], legal_actions = self.game.get_valid_actions(board, WHITE, self.Pi[board_key])
             # 存储该状态下所有可行动作
             self.Actions[board_key] = legal_actions
             self.N[board_key] = 0
@@ -93,8 +127,8 @@ class Mcts:
         for a in legal_actions:
             p = 0
             for i in [0, 1, 2]:
-                assert self.P[board_key][a[i] + i * 100] > 0
-                p += math.log(self.P[board_key][a[i] + i * 100])
+                assert self.Pi[board_key][a[i] + i * 100] > 0
+                p += math.log(self.Pi[board_key][a[i] + i * 100])
             psa.append(p)
         psa = np.array(psa)
         psa = np.exp(psa) / sum(np.exp(psa))
@@ -113,11 +147,11 @@ class Mcts:
 
         a = best_action
         # next_player反转
-        next_board, next_player = self.game.get_next_state(board, player, a)
-        # 下一个状态，将棋盘颜色反转
+        next_board, next_player = self.game.get_next_state(board, WHITE, a)
+        # 下一个状态，将棋盘颜色反转 (next_player = BLACK)
         next_board = self.game.get_transformed_board(next_board, next_player)
 
-        v = self.search(next_board, next_player)
+        v = self.search(next_board)
 
         if (board_key, a[0], a[1], a[2]) in self.Qsa:
             self.Qsa[(board_key, a[0], a[1], a[2])] = (self.Nsa[(board_key, a[0], a[1], a[2])] * self.Qsa[(board_key, a[0], a[1], a[2])] + v) / (self.Nsa[(board_key, a[0], a[1], a[2])]+1)
