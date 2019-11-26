@@ -17,6 +17,13 @@ class Game:
         """
         self.board_size = board_size
         self.board = np.zeros((board_size, board_size), dtype=int)
+        self.get_init_board(board_size)
+
+    def get_init_board(self, board_size):
+        """
+        :return b.board: 返回board_size*board_size的棋盘的二维numpy数组
+        """
+        self.board = np.zeros((board_size, board_size), dtype=int)
         # 黑棋
         self.board[0][board_size // 3] = BLACK
         self.board[0][2 * board_size // 3] = BLACK
@@ -27,11 +34,6 @@ class Game:
         self.board[2 * board_size // 3][board_size - 1] = WHITE
         self.board[board_size - 1][board_size // 3] = WHITE
         self.board[board_size - 1][2 * board_size // 3] = WHITE
-
-    def get_init_board(self):
-        """
-        :return b.board: 返回board_size*board_size的棋盘的二维numpy数组
-        """
         return self.board
 
     def get_board_size(self):
@@ -69,7 +71,7 @@ class Game:
         """
         return board, WHITE if player == BLACK else BLACK
 
-    def get_valid_actions(self, board, player, p):
+    def get_valid_actions(self, board, player, pi):
         """
         计算当前棋盘下所有可走的动作，同时将NN返回的预测值重新整理:将绝可能到的点概率值为零
         :param board: n*n棋盘
@@ -82,7 +84,7 @@ class Game:
 
         """
         legal_actions = []
-        return p, legal_actions
+        return pi, legal_actions
 
     def get_game_ended(self, board, player):
         """
@@ -148,8 +150,7 @@ class Game:
         :param player: 当前玩家
         :return board: 转换后的棋盘
         """
-        if player == WHITE:
-            return board
+        # 深拷贝
         board = np.copy(board)
         for i in range(self.board_size):
             for j in range(self.board_size):
@@ -167,14 +168,3 @@ class Game:
         """
         return board.tostring()
 
-
-# 测试使用
-game = Game(5)
-b = np.copy(game.board)
-print(b)
-# print(game.get_action_size())
-# u = np.zeros(75, dtype=int)
-# print(u)
-# y = game.get_symmetries(b, u)
-# for b, p in y:
-#     print(b,p)
