@@ -63,7 +63,7 @@ class Mcts:
         steps_train_data = []
         sym = self.game.get_symmetries(board, pi)
         for boards, pis in sym:
-            steps_train_data.append([boards, player, pis, None])
+            steps_train_data.append([boards, player, pis])
         pi_start = pi[0:self.game.board_size]
         pi_end = pi[self.game.board_size:2 * self.game.board_size]
         pi_arrow = pi[2 * self.game.board_size:3 * self.game.board_size]
@@ -76,17 +76,18 @@ class Mcts:
             action_end = np.random.choice(len(pi_end), p=pi_end)
             action_arrow = np.random.choice(len(pi_arrow), p=pi_arrow)
             # 加断言保证起子点有棋子，落子点和放箭点均无棋子
-            assert copy_board[action_start // self.game.board_size][action_start % self.game.board_size] == self.player
+            assert copy_board[action_start // self.game.board_size][action_start % self.game.board_size] == player
             assert copy_board[action_end // self.game.board_size][action_end % self.game.board_size] == EMPTY
             assert copy_board[action_arrow // self.game.board_size][action_arrow % self.game.board_size] == EMPTY
             if self.game.is_legal_move(action_start, action_end):
                 copy_board[action_start // self.game.board_size][action_start % self.game.board_size] = EMPTY
-                copy_board[action_end // self.game.board_size][action_end % self.game.board_size] = self.player
+                copy_board[action_end // self.game.board_size][action_end % self.game.board_size] = player
                 if self.game.is_legal_move(action_end, action_arrow):
                     best_action = [action_start, action_end, action_arrow]
-                    break  # 跳出While True 循环
+                    # 跳出While循环
+                    break
                 else:
-                    copy_board[action_start // self.game.board_size][action_start % self.game.board_size] = self.player
+                    copy_board[action_start // self.game.board_size][action_start % self.game.board_size] = player
                     copy_board[action_end // self.game.board_size][action_end % self.game.board_size] = EMPTY
 
         return best_action, steps_train_data
@@ -95,7 +96,6 @@ class Mcts:
         """
         对状态进行一次递归的模拟搜索，添加各状态（棋盘）的访问结点信息（始终以白棋视角存储）
         :param board: 棋盘当前
-        :param player: 当前玩家
         :return: None
         """
         board_key = self.game.to_string(board)
@@ -109,7 +109,6 @@ class Mcts:
         if board_key not in self.Pi:
             # 由神经网路预测策略与v([-1,1]) PS[s] 为[1:300]数组
             self.Pi[board_key], v = self.nnet.predict(board)
-            # 得到在有效路径归一化后的P与动作；eg：P -->1 * 300：[0.2， 0.02， 0.23，......]   动作：legal_actions -->[[s, e, a], [98, 87, 56]......]
             # 始终寻找白棋可走的行动
             self.Pi[board_key], legal_actions = self.game.get_valid_actions(board, WHITE, self.Pi[board_key])
             # 存储该状态下所有可行动作
@@ -132,14 +131,14 @@ class Mcts:
             psa.append(p)
         psa = np.array(psa)
         psa = np.exp(psa) / sum(np.exp(psa))
-        # 求置信上限函数：Q+c*p*((Ns/Nsa)的开方)
+        # 求置信上限函数：Q + Cpuct * p * ((Ns/Nsa)的开方)
         for i, a in enumerate(legal_actions):              # enumerate():将一个元组加上序号，其中 i 为序号：0，1.... a为中的legal_actions元组
             if (board_key, a[0], a[1], a[2]) in self.Qsa:  # board_key:棋盘字符串，a[0], a[1], a[2]分别为起始点，落子点，放箭点
-                uct = self.Qsa[(board_key, a[0], a[1], a[2])] + self.args.cpuct * psa[i] * math.sqrt(self.N[board_key])\
+                uct = self.Qsa[(board_key, a[0], a[1], a[2])] + self.args.Cpuct * psa[i] * math.sqrt(self.N[board_key])\
                       / (1 + self.Nsa[(board_key, a[0], a[1], a[2])])
 
             else:
-                uct = self.args.cpuct * psa[i] * math.sqrt(self.N[board_key] + EPS)   # 防止乘积为0
+                uct = self.args.Cpuct * psa[i] * math.sqrt(self.N[board_key] + EPS)   # 防止乘积为0
 
             if uct > best_uct:
                 best_uct = uct
@@ -154,7 +153,9 @@ class Mcts:
         v = self.search(next_board)
 
         if (board_key, a[0], a[1], a[2]) in self.Qsa:
-            self.Qsa[(board_key, a[0], a[1], a[2])] = (self.Nsa[(board_key, a[0], a[1], a[2])] * self.Qsa[(board_key, a[0], a[1], a[2])] + v) / (self.Nsa[(board_key, a[0], a[1], a[2])]+1)
+            self.Qsa[(board_key, a[0], a[1], a[2])] = (self.Nsa[(board_key, a[0], a[1], a[2])] *
+                                                       self.Qsa[(board_key, a[0], a[1], a[2])] + v)\
+                                                      / (self.Nsa[(board_key, a[0], a[1], a[2])]+1)
             self.Nsa[(board_key, a[0], a[1], a[2])] += 1
 
         else:
