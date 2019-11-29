@@ -48,15 +48,40 @@ class Game:
         """
         return 3 * self.board_size ** 2
 
-    def is_legal_move(self, start, end):
-
+    def is_legal_move(self, board, start, end):
         """
         判断start—>end是否可走
+        :param board: 当前棋盘
         :param start: 起点
         :param end: 落点
         :return: boolean:可走返回True else False
         """
-        return True or False
+        sx = start // self.board_size  # 起点x
+        sy = start % self.board_size  # 起点y
+        ex = end // self.board_size  # 落点x
+        ey = end % self.board_size  # 落点y
+        # print(sx,sy,ex,ey)
+        # 先判断是否沿左右、上下、米子方向走，沿则可能，不沿则绝不可能直接False
+        if ex == sx or ey == sy or abs(ex - sx) == abs(ey - sy):
+            tx = (ex - sx) // max(1, abs(ex - sx))  # +1：向右  -1：向左
+            ty = (ey - sy) // max(1, abs(ey - sy))  # +1：向上  -1：向下
+            t_start = -1  #
+            t_end = end  #
+            # 之后从start一步一步走向end，判断是否有障碍直到end
+            while sx != ex or sy != ey:
+                sx += tx
+                sy += ty
+                t_start = sx * self.board_size + sy
+                if board[sx][sy] != EMPTY:  # 没走到end且遇到障碍
+                    break
+            if t_start == t_end:  # 如果是因为顺利走到end而break，则可以走
+                if board[sx][sy] != EMPTY:
+                    return False
+                return True
+            else:  # 如果是因为有障碍而break，则不能走
+                return False
+        else:
+            return False
 
     # 更新选点,落点,放箭棋盘 ——>返回:新棋盘和下次走棋方 -----:该方法没有判别起始点、落子和放箭是否符合规则的
     def get_next_state(self, board, player, action):
@@ -69,35 +94,148 @@ class Game:
                 board:当前棋盘
                 player:当前玩家:BLACK or WHITE
         """
-        return board, WHITE if player == BLACK else BLACK
+        b = board.copy()
+        start_x, start_y = action[0] // self.board_size, action[0] % self.board_size
+        end_x, end_y = action[1] // self.board_size, action[1] % self.board_size
+        arrow_x, arrow_y = action[2] // self.board_size, action[2] % self.board_size
 
-    def get_valid_actions(self, board, player, pi):
+        if b[start_x][start_y] != player:
+            print("Game-get_next_state: Error Start!", start_x, start_y)
+        else:
+            b[start_x][start_y] = EMPTY
+        if b[end_x][end_y] != EMPTY:
+            print("Game-get_next_state: Error End", start_x, start_y)
+        else:
+            b[end_x][end_y] = player
+        if b[arrow_x][arrow_y] != EMPTY:
+            print("Game-get_next_state: Error arrow", start_x, start_y)
+        else:
+            b[arrow_x][arrow_y] = ARROW
+
+        if player == WHITE:
+            player = BLACK
+        else:
+            player = WHITE
+
+        return b, player
+
+    def get_valid_actions(self, board, player, ps):
         """
         计算当前棋盘下所有可走的动作，同时将NN返回的预测值重新整理:将绝可能到的点概率值为零
         :param board: n*n棋盘
         :param player:int:当前玩家
-        :param Ps:3 * board_size ** 2列表:使用神经网络直接预测的概率值
-        :return: Ps, valids
+        :param ps:3 * board_size ** 2列表:使用神经网络直接预测的概率值
+        :return: Ps, all_valid_action
                  Ps:整理后的3 * board_size ** 2列表;
-                 valids:三元组(s,e,a)构成的列表:当前棋盘下的所有可走动作
-                 Ps -->1 * 300：[0.2， 0.02， 0.23，......]   动作：valids -->[(s, e, a),......]
-
+                 all_valid_action:三元组(s,e,a)构成的列表:当前棋盘下的所有可走动作
+                 Ps -->1 * 300：[0.2， 0.02， 0.23，......]   动作：all_valid_action -->[(s, e, a),......]
         """
-        legal_actions = []
-        return pi, legal_actions
+        b = board.copy()
+        size = self.board_size  # 棋盘的尺寸
+
+        ps_start = ps[0:size ** 2]
+        ps_end = ps[size ** 2:2 * size ** 2]
+        ps_arrow = ps[2 * size ** 2:3 * size ** 2]
+
+        valid_start = np.zeros(size ** 2, dtype=int)
+        valid_end = np.zeros(size ** 2, dtype=int)
+        valid_arrow = np.zeros(size ** 2, dtype=int)
+
+        all_valid_action = []  # 储存合法的步伐
+        for s in range(size ** 2):  # 挑选出合法的步伐
+            if b[s // size][s % size] == player:
+                valid_start[s] = 1
+                for e in range(size ** 2):
+                    if self.is_legal_move(b, s, e):
+                        valid_end[e] = 1
+                        b[s // size][s % size] = EMPTY
+                        b[e // size][e % size] = player
+                        for a in range(size ** 2):
+                            if self.is_legal_move(b, e, a):
+                                valid_arrow[a] = 1
+                                valid = (s, e, a)
+                                all_valid_action.append(valid)
+                        b[s // size][s % size] = player
+                        b[e // size][e % size] = EMPTY
+        for s in range(size ** 2):
+            if valid_start[s] == 0:
+                ps_start[s] = 0
+        sum = np.sum(ps_start)
+        if sum > 0:
+            ps_start /= sum
+        else:
+            print("All start moves were masked, do workaround.")
+            # ps_start[valid_start == 1] = 0.25
+            for s in range(size ** 2):
+                if valid_start[s] == 1:
+                    ps_start[s] = 0.25
+
+        for e in range(size ** 2):
+            if valid_end[e] == 0:
+                ps_end[e] = 0
+        sum = np.sum(ps_end)
+        if sum > 0:
+            ps_end /= sum
+        else:
+            print("All end moves were masked, do workaround.")
+
+        for a in range(size ** 2):
+            if valid_arrow[a] == 0:
+                ps_arrow[a] = 0
+        sum = np.sum(ps_arrow)
+        if sum > 0:
+            ps_arrow /= sum
+        else:
+            print("All arrow moves were masked, do workaround.")
+
+        ps[0:size ** 2] = ps_start
+        ps[size ** 2:2 * size ** 2] = ps_end
+        ps[2 * size ** 2:3 * size ** 2] = ps_arrow
+
+        all_valid_action = np.array(all_valid_action)  # 转成数组
+        return ps, all_valid_action
 
     def get_game_ended(self, board, player):
         """
-        返回游戏状态：输：-1/赢：1/未结束：0
+        判断游戏轮到player走棋时否结束
         :param board: n*n棋盘
-        :param player: 当前玩家
-        :return: 0 or 1 or -1: 0—>未能判断输赢；1—>player赢；-1—>player输
+        :param player: 当前轮到哪位该玩家走棋
+        :return: 0 or -1: 0—>未能判断输赢；-1—>player输 ：判断不了赢的情况（提前判断对手不能走有时是不准确的，可能你走完对手又能走了）
         """
-        # 这部分和原始程序不一样，需要自己写
-        # 编程思路即对棋盘上的每方四个皇后分别判断是否可走，当某一方四个皇后均不可走时即输
-        # 具体的过程交给你们了！
-
-        return 0 or 1 or -1
+        size = self.board_size
+        # 记录player可走的棋子数量
+        count_player = 0
+        # 记录player对手可走的棋子数量
+        # count_opposite_player = 0
+        for i in range(size):
+            for j in range(size):
+                if board[i][j] == player:
+                    # 对八个方向判断是否可走
+                    for k in range(8):
+                        m = i + self.directions[k][0]
+                        n = j + self.directions[k][1]
+                        if m not in range(size) or n not in range(size):
+                            continue
+                        if board[m][n] == EMPTY:
+                            count_player += 1
+                            break
+                # if board[i][j] == -player:
+                #     # 对八个方向判断是否可走
+                #     for k in range(8):
+                #         m = i + self.directions[k][0]
+                #         n = j + self.directions[k][1]
+                #         if m not in range(size) or n not in range(size):
+                #             continue
+                #         if board[m][n] == EMPTY:
+                #             count_opposite_player += 1
+                #             break
+        # 如果当前玩家可走的棋子数为0，则当前棋子 输
+        if count_player == 0:
+            return -1
+        # # 如果当前对手可走的棋子数为0，则当前棋子 赢
+        # if count_opposite_player == 0:
+        #     return 1
+        return 0
 
     def get_symmetries(self, board, pi):
         """
@@ -151,6 +289,8 @@ class Game:
         :return board: 转换后的棋盘
         """
         # 深拷贝
+        if player == WHITE:
+            return board
         board = np.copy(board)
         for i in range(self.board_size):
             for j in range(self.board_size):
