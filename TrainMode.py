@@ -65,9 +65,11 @@ class TrainMode:
                 iter_train_data = deque([], maxlen=self.args.max_len_queue)
 
                 # 下“num_play_game”盘棋训练一次NNet
-                for plays in range(self.args.num_play_game):  
+                for i in range(self.args.num_play_game):
                     # 重置搜索树
+                    print("====================================== 第", i+1, "盘棋 ======================================")
                     self.mcts = Mcts(self.game, self.nnet, self.args)
+                    self.player = WHITE
                     iter_train_data += self.play_one_game()
 
                 # save the iteration examples to the history
@@ -123,6 +125,7 @@ class TrainMode:
         play_step = 0
         while True:
             play_step += 1
+            ts = time.time()
             print('---------------------------')
             print('第', play_step, '步')
             print(board)
@@ -133,12 +136,18 @@ class TrainMode:
             # 将翻转后的棋盘和temp传给蒙特卡洛树搜索方法得到当前的策略
             # 进行多次mcts搜索得出来概率
             next_action, steps_train_data = self.mcts.get_best_action(transformed_board, self.player)
-            print(next_action)
+            te = time.time()
+            print("下一步：", next_action, '用时：', int(te-ts), 's')
             board, self.player = self.game.get_next_state(board, self.player, next_action)
 
             r = self.game.get_game_ended(board, self.player)
-
             if r != 0:  # 胜负已分
+                if self.player == WHITE:
+                    print('白棋输')
+                else:
+                    print('黑棋输')
+                print("##### 终局 #####")
+                print(board)
                 return [(x[0], x[2], r*((-1)**(x[1] != self.player))) for x in steps_train_data]
 
 
@@ -147,8 +156,3 @@ if __name__ == "__main__":
     nnet = NNet(game)
     train = TrainMode(game, nnet)
     train.learn()
-    # game.board[4][4] = 10
-    # print(game.board)
-    # print(game.get_init_board(5))
-    # print(game.get_action_size())
-    # print(args.numIters)

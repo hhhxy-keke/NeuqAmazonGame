@@ -41,10 +41,15 @@ class Mcts:
         :return best_action: 下一步最优动作
         """
         for i in range(self.args.num_mcts_search):
+            # print('第', i, '次搜索')
             self.search(board)
 
         # 这里将采样次数转化成对应的模拟概率
         s = self.game.to_string(board)
+        # 断言：当前棋盘在字典N中
+        assert s in self.N
+        # self.N[s] += 1
+        # print('Mcts-get_best_action: ', self.N[s])
         # 如果一个动作存在Ns_start记录中，则将该点设为 Ns_start[(s, a)]，不存在时设为0 ////counts_start:[1:100]
         counts_start = [self.N_start[(s, a)] if (s, a) in self.N_start else 0 for a in range(self.game.board_size**2)]
         # softmax ，将整个1*100的起始点的采样数N转换成概率模式//[0，0，0，0.3，0，0，0，0.21，0..........]
@@ -53,7 +58,6 @@ class Mcts:
         p_end = [x / float(self.N[s]) for x in counts_end]
         counts_arrow = [self.N_arrow[(s, a)] if (s, a) in self.N_arrow else 0 for a in range(self.game.board_size**2)]
         p_arrow = [x / float(self.N[s]) for x in counts_arrow]
-
         # 方法二：使用softmax策略选择动作
         pi = p_start
         pi = np.append(pi, p_end)
@@ -64,32 +68,38 @@ class Mcts:
         sym = self.game.get_symmetries(board, pi)
         for boards, pis in sym:
             steps_train_data.append([boards, player, pis])
-        pi_start = pi[0:self.game.board_size]
-        pi_end = pi[self.game.board_size:2 * self.game.board_size]
-        pi_arrow = pi[2 * self.game.board_size:3 * self.game.board_size]
+        pi_start = pi[0:self.game.board_size**2]
+        pi_end = pi[self.game.board_size**2:2 * self.game.board_size**2]
+        pi_arrow = pi[2 * self.game.board_size**2:3 * self.game.board_size**2]
         # 深拷贝
         copy_board = np.copy(board)
         # 选择下一步最优动作
+        # print(sum(pi_start), sum(pi_end), sum(pi_arrow))
+        # assert sum(pi_start) == 1
+        # assert sum(pi_end) == 1
+        # assert sum(pi_arrow) == 1
         while True:
             # 将1*100的策略概率的数组传入得到 0~99 的行动点 , action_start,end,arrow都是选出来的点 eg: 43,65....
             action_start = np.random.choice(len(pi_start), p=pi_start)
+            # print('start:', action_start)
             action_end = np.random.choice(len(pi_end), p=pi_end)
+            # print('end', action_end)
             action_arrow = np.random.choice(len(pi_arrow), p=pi_arrow)
+            # print('arrow', action_arrow)
             # 加断言保证起子点有棋子，落子点和放箭点均无棋子
-            assert copy_board[action_start // self.game.board_size][action_start % self.game.board_size] == player
-            assert copy_board[action_end // self.game.board_size][action_end % self.game.board_size] == EMPTY
-            assert copy_board[action_arrow // self.game.board_size][action_arrow % self.game.board_size] == EMPTY
-            if self.game.is_legal_move(action_start, action_end):
+            # assert copy_board[action_start // self.game.board_size][action_start % self.game.board_size] == WHITE
+            # assert copy_board[action_end // self.game.board_size][action_end % self.game.board_size] == EMPTY
+            # assert copy_board[action_arrow // self.game.board_size][action_arrow % self.game.board_size] == EMPTY
+            if self.game.is_legal_move(copy_board, action_start, action_end):
                 copy_board[action_start // self.game.board_size][action_start % self.game.board_size] = EMPTY
-                copy_board[action_end // self.game.board_size][action_end % self.game.board_size] = player
-                if self.game.is_legal_move(action_end, action_arrow):
+                copy_board[action_end // self.game.board_size][action_end % self.game.board_size] = WHITE
+                if self.game.is_legal_move(copy_board, action_end, action_arrow):
                     best_action = [action_start, action_end, action_arrow]
                     # 跳出While循环
                     break
                 else:
-                    copy_board[action_start // self.game.board_size][action_start % self.game.board_size] = player
+                    copy_board[action_start // self.game.board_size][action_start % self.game.board_size] = WHITE
                     copy_board[action_end // self.game.board_size][action_end % self.game.board_size] = EMPTY
-
         return best_action, steps_train_data
 
     def search(self, board):
@@ -102,15 +112,19 @@ class Mcts:
         # 判断是否胜负已分（叶子节点）
         if board_key not in self.Game_End:
             self.Game_End[board_key] = self.game.get_game_ended(board, WHITE)
+
         if self.Game_End[board_key] != 0:
+            # print("模拟到根节点", self.Game_End[board_key])
             return -self.Game_End[board_key]
 
         # 判断board_key是否为新扩展的节点
         if board_key not in self.Pi:
             # 由神经网路预测策略与v([-1,1]) PS[s] 为[1:300]数组
             self.Pi[board_key], v = self.nnet.predict(board)
+            # print(len(self.Pi[board_key]))
             # 始终寻找白棋可走的行动
             self.Pi[board_key], legal_actions = self.game.get_valid_actions(board, WHITE, self.Pi[board_key])
+
             # 存储该状态下所有可行动作
             self.Actions[board_key] = legal_actions
             self.N[board_key] = 0
@@ -123,11 +137,13 @@ class Mcts:
         psa = list()                  # 状态转移概率，长度为当前状态下可走的动作数
 
         # 将选点概率P转换成动作的概率
+        # print(legal_actions)
+        # print(self.Pi[board_key])
         for a in legal_actions:
             p = 0
             for i in [0, 1, 2]:
-                assert self.Pi[board_key][a[i] + i * 100] > 0
-                p += math.log(self.Pi[board_key][a[i] + i * 100])
+                assert self.Pi[board_key][a[i] + i * self.game.board_size ** 2] > 0
+                p += math.log(self.Pi[board_key][a[i] + i * self.game.board_size ** 2])
             psa.append(p)
         psa = np.array(psa)
         psa = np.exp(psa) / sum(np.exp(psa))
